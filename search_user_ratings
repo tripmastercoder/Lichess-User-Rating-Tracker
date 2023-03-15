@@ -1,0 +1,177 @@
+import sqlite3
+import datetime
+import scraping_lichess
+
+#open connection
+def open_connection():
+    search_by = input(("Enter 'top' to search for top rated players or 'user' to search by username: "))
+    while search_by.lower() != 'top' and search_by.lower() != 'user':
+        print("Incorrect input")
+        search_by = input(("Enter 'top' to search for top rated players or 'user' to search by username "))
+    if search_by.lower() == 'top':
+        scraping_lichess.top_ten()
+        redo = input(("Run programme again? Y/N "))
+        if redo.lower() == "y":
+            open_connection()
+        else:
+            print("Bye!")
+            exit()
+    name = input("Please enter a lichess username: ")
+    info_or_ratings = input("Choose 'info' to view user's current ratings or 'history' to see historical ratings data: ")
+    while info_or_ratings.lower() != "info" and info_or_ratings.lower() != "history":
+        print("Invalid choice!")
+        info_or_ratings = input("Choose 'info' to view user's current ratings or 'history' to see historical ratings data: ")
+    if info_or_ratings.lower() == "info":
+        scraping_lichess.user_info(name)
+    elif info_or_ratings.lower() == "history":
+        select = input("Check classic, correspondence or puzzle ratings? ")
+        while select.lower() != "classic" and select.lower() != "correspondence" and select.lower() != "puzzle":
+            print("That's not a valid choice!")
+            select = input("Classic, correspondence or puzzle ratings? ")
+        select = select.lower()
+        conn = sqlite3.connect('database_test.db')
+        c = conn.cursor()
+
+        try:
+            c.execute(f'''CREATE TABLE {name}_{select}_ratings
+                      (date TEXT, rating INTEGER)''')
+        except sqlite3.OperationalError:
+            pass
+
+        puzzles_dict = scraping_lichess.puzzle_games(name)
+        correspondence_dict = scraping_lichess.correspondence_games(name)
+        classic_dict = scraping_lichess.classic_games(name)
+
+        if select.lower() == "puzzle":
+            for i in puzzles_dict:
+                c.execute(f'INSERT INTO {name}_{select}_ratings VALUES (?, ?)', (i, puzzles_dict[i]))
+            conn.commit()
+        elif select.lower() == "correspondence":
+            for i in correspondence_dict:
+                c.execute(f'INSERT INTO {name}_{select}_ratings VALUES (?, ?)', (i, correspondence_dict[i]))
+            conn.commit()
+        elif select.lower() == "classic":
+            for i in classic_dict:
+                c.execute(f'INSERT INTO {name}_{select}_ratings VALUES (?, ?)', (i, classic_dict[i]))
+            conn.commit()
+    
+        return name, select
+
+#SELECT ALL function
+def select_all(table):
+    conn = sqlite3.connect('database_test.db')
+    c = conn.cursor()
+    c.execute(f"SELECT * FROM {table}")
+    rows = c.fetchall()
+    dates = [row[0] for row in rows]
+    ratings = [row[1] for row in rows]
+
+    print(f"Highest rated score: {max(ratings)}")
+    print(f"Lowest rating is {min(ratings)}")
+    
+    return dates, ratings
+
+#SELECT by rating or date function
+def select_by(table):
+    choice = input("Select by rating or date? ")
+    while choice.lower() != "rating" and choice.lower() != "date":
+        print("That's not a valid opton")
+        choice = input("Select by rating or date? ")
+    if choice == 'rating':
+        rating_choice = input("Higher or lower? ")
+        if rating_choice.lower() == "higher":
+            score = int(input("Choose a score: "))
+            select_greater_than(table, score)
+        elif rating_choice.lower() == "lower":
+            score = int(input("Choose a score: "))
+            select_lower_than(table, score)
+        while rating_choice.lower() != 'higher' and rating_choice.lower() != 'lower':
+            print("Enter a valid choice please.")
+            rating_choice = input("Higher or lower? ")
+
+    elif choice == "date":
+        date_choice = input("Before or after a given date? ")
+        if date_choice.lower() == "before":
+            date = enter_date()
+            select_before(table, date)
+        elif date_choice.lower() == "after":
+            date = enter_date()
+            select_after(table, date)
+        while date_choice.lower() != "before" and date_choice.lower() != "after":
+            print("That's not a valid option!")
+            date_choice = input("Before or after a given date? ")
+
+#function to input and format a date
+def enter_date():
+    year = int(input("Please enter a year: "))
+    month = int(input("Please enter a month: "))
+    while month < 1 or month > 12:
+        print("That's not a valid month")
+        month = int(input("Please enter a month: "))
+    day = int(input("Please enter a day: "))
+    while day < 1 or day > 31:
+        print("That's not a valid day")
+        day = int(input("Please enter a day: "))
+    if month < 10:
+        month = int(f"0{month}")
+    if day < 10:
+        day = int(f"0{day}")
+    date_string = f"{year}-{month}-{day}"
+    date = datetime.datetime.strptime(date_string, '%Y-%m-%d')
+    return date
+
+#SELECT before function
+def select_before(table, date):
+    conn = sqlite3.connect('database_test.db')
+    c = conn.cursor()
+    print(date)
+    c.execute(f"SELECT rating, date FROM {table} WHERE date < ?", (date,))
+    rows = c.fetchall()
+    for row in rows:
+        print(f"{row[0]} ({row[1]})")
+
+#SELECT after function
+def select_after(table, date):
+    conn = sqlite3.connect('database_test.db')
+    c = conn.cursor()
+    c.execute(f"SELECT rating, date FROM {table} WHERE date > ?", (date,))
+    rows = c.fetchall()
+    for row in rows:
+        print(f"{row[0]} ({row[1]})")
+
+#SELECT greater than function
+def select_greater_than(table, score):
+    conn = sqlite3.connect('database_test.db')
+    c = conn.cursor()
+    c.execute(f"SELECT rating, date FROM {table} WHERE rating > ?", (score,))
+    rows = c.fetchall()
+    for row in rows:
+        print(f"{row[0]} ({row[1]})")
+
+#SELECT lower than function
+def select_lower_than(table, score):
+    conn = sqlite3.connect('database_test.db')
+    c = conn.cursor()
+    c.execute(f"SELECT rating, date FROM {table} WHERE rating < ?", (score,))
+    rows = c.fetchall()
+    for row in rows:
+        print(f"{row[0]} ({row[1]})")
+
+def main():
+    name, select = open_connection()
+    choice = input("Select all ratings ('all') or filter ratings ('filter')? ")
+    while choice.lower() != "all" and choice.lower() != "filter":
+        print("Enter a valid option ('all' or 'filter'")
+        choice = input("Select all ratings ('all') or filter ratings ('filter')? ")
+    if choice.lower() == "all":
+        dates, ratings = select_all(f"{name}_{select}_ratings")
+    elif choice.lower() == "filter":
+        select_by(f"{name}_{select}_ratings")
+    again = input("Would you like to run the programme again? Y/N ")
+    if again.lower() == "y":
+        main()
+    else:
+        print("Bye!")
+        
+
+main()
