@@ -1,0 +1,167 @@
+import requests
+import time
+from datetime import datetime
+
+def user_info(username):
+    url = f'https://lichess.org/api/user/{username}'
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    ratings = {}
+
+    if response.status_code == 200:
+        data = response.json()
+        performance = data["perfs"]
+        username = data["username"]
+        print(f"\nUsername: {username}")
+        print("Ratings: ")
+        ratings = {}
+        for i in performance:
+            ratings[i] = f"{performance[i]['rating']}"
+        for i in ratings:
+            print(f"{i}: {ratings[i]}")
+    else:
+        print("Error:", response.status_code)
+        
+def top_ten():
+    url = "https://lichess.org/api/player"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    
+    if response.status_code == 200:
+        data = response.json()
+        # for line in data:
+        #     print(f"{line}: and then {data[line]}\n")
+        for i in data:
+            print(f"{i}: ")
+            for j in range(10):
+                data_line = f"(rating {data[i][j]['perfs'][i]['rating']})"
+                first_line = f"{j+1}. {data[i][j]['id']}"
+                print(f"{first_line:25} {data_line}")
+            print("\n")
+        # for i in data:
+        #     print(f"{i}: {data[i][0]['username']}")
+    else:
+        print("Error: ", response.status_code)
+        
+def puzzle_games(username):
+    url = f"https://lichess.org/api/user/{username}/rating-history"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    
+    date_dict = {}
+    dates = []
+    if response.status_code == 200:
+        data = response.json()
+        for i in data:
+            # print(i)
+            if i['name'] == "Puzzles":
+                for j in range(len(i['points'])):
+                    if i['points'][j][2] > 31 or i['points'][j][1] > 12:
+                        continue
+                    dates.append([i['points'][j][0], i['points'][j][1], i['points'][j][2], i['points'][j][3]])
+        for i in dates:
+            try:
+                date_dict[f"{i[0]}-{i[1]}-{i[2]}"] = i[3]
+            except ValueError:
+                pass
+        return date_dict  
+    else:
+        print("Error: ", response.status_code)
+
+def classic_games(username):
+    url = f"https://lichess.org/api/user/{username}/rating-history"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    
+    date_dict = {}
+    dates = []
+    if response.status_code == 200:
+        data = response.json()
+        for i in data:
+            # print(i)
+            if i['name'] == "Classic":
+                for j in range(len(i['points'])):
+                    if i['points'][j][2] > 31 or i['points'][j][1] > 12:
+                        continue
+                    dates.append([i['points'][j][0], i['points'][j][1], i['points'][j][2], i['points'][j][3]])
+        for i in dates:
+            try:
+                date_dict[f"{i[0]}-{i[1]}-{i[2]}"] = i[3]
+            except ValueError:
+                pass
+        return date_dict  
+    else:
+        print("Error: ", response.status_code)
+
+def correspondence_games(username):
+    url = f"https://lichess.org/api/user/{username}/rating-history"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    
+    date_dict = {}
+    dates = []
+    if response.status_code == 200:
+        data = response.json()
+        for i in data:
+            if i['name'] == "Correspondence":
+                # print(f"{i['name']}: \n")
+                for j in range(len(i['points'])):
+                    # print(i['points'][j][0], i['points'][j][1], i['points'][j][2])
+                    # if i['points'][j][2] > 31 or i['points'][j][1] > 12:
+                    #     continue
+                    dates.append([i['points'][j][0], i['points'][j][1], i['points'][j][2], i['points'][j][3]])
+        # print(dates)
+        for i in dates:
+            date_dict[f"{i[0]}-{i[1]}-{i[2]}"] = i[3]
+        return date_dict    
+    else:
+        print("Error: ", response.status_code)
+
+
+# current game data
+def current_game(username):
+    url = f"https://lichess.org/api/user/{username}/current-game"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers)  
+    time.sleep(1)
+    if response.status_code == 200:
+        data = response.json()
+        black = data['players']['black']['user']['name']
+        black_rating = data['players']['black']['rating']
+        white = data['players']['white']['user']['name']
+        white_rating = data['players']['white']['rating']
+        print("Current games being played: ")
+        print(f"User playing white is: {white} (current rating: {white_rating})")
+        print(f"User playing black is: {black} (current rating: {black_rating})")
+    else:
+        print("Error: ", response.status_code)
+
+    
+#all game data
+def all_games():
+    username = "tripmaster"
+    url = f"https://lichess.org/api/games/user/{username}"
+    headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
+    response = requests.get(url, headers=headers) 
+    print("DONE")
+    if response.status_code == 200:
+        data = response.json()
+        print(data)
+    else:
+        print("Error: ", response.status_code)
+        print(response.text)
+
+if __name__ == "__main__":
+    username = input("Enter a username: ")
+    user_info("tripmaster")
+    print("\nCurrent game info:\n")
+    current_game(username)
+    # all_games()
+    user_info("tripmaster")
+    top_ten()
+    correspondence_games("tripmaster")
