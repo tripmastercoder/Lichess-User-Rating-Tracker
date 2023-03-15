@@ -2,6 +2,7 @@ import requests
 import time
 from datetime import datetime
 
+# return user's current ratings for all game types
 def user_info(username):
     url = f'https://lichess.org/api/user/{username}'
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
@@ -22,29 +23,60 @@ def user_info(username):
             print(f"{i}: {ratings[i]}")
     else:
         print("Error:", response.status_code)
-        
+
+# access top 10 players for each game type
 def top_ten():
     url = "https://lichess.org/api/player"
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
     response = requests.get(url, headers=headers)  
     time.sleep(1)
     
+    games_dict = {}
+    again = True
     if response.status_code == 200:
         data = response.json()
-        # for line in data:
-        #     print(f"{line}: and then {data[line]}\n")
+        # create dictionary of top ten players for each game type
         for i in data:
-            print(f"{i}: ")
+            games_score_list = []
             for j in range(10):
                 data_line = f"(rating {data[i][j]['perfs'][i]['rating']})"
                 first_line = f"{j+1}. {data[i][j]['id']}"
-                print(f"{first_line:25} {data_line}")
-            print("\n")
-        # for i in data:
-        #     print(f"{i}: {data[i][0]['username']}")
+                games_score_list.append(f"{first_line:25} {data_line}")
+            games_dict[i] = games_score_list
+        print("\nGame types: ")
+        for i in games_dict:
+            print(i)
+        while again == True:
+            # allow the user to choose all game types or specific game type
+            choice = input("Choose 'all' or a specific game type: ")
+            while choice not in games_dict and choice.lower() != 'all':
+                print("Invalid choice")
+                choice = input("Choose 'all' or a specific game type: ")
+                # print top ten players for all game types
+            if choice.lower() == 'all':
+                for i in games_dict:
+                    print(f"\n{i}: ")
+                    for j in range(len(games_dict[i])):
+                        print(f"{games_dict[i][j]}")
+                repeat = input("Search again or quit? ")
+                if repeat.lower() == 'quit':
+                    again = False
+                elif repeat.lower() == 'again':
+                    continue
+            # print top ten for specific game type
+            else:
+                print(f"\n{choice}: ")
+                for i in games_dict[choice]:
+                    print(i)
+                repeat = input("Search again or quit? ")
+                if repeat.lower() == 'quit':
+                    again = False
+                elif repeat.lower() == 'again':
+                    continue
     else:
         print("Error: ", response.status_code)
-        
+
+# return information on puzzle ratings
 def puzzle_games(username):
     url = f"https://lichess.org/api/user/{username}/rating-history"
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
@@ -56,7 +88,6 @@ def puzzle_games(username):
     if response.status_code == 200:
         data = response.json()
         for i in data:
-            # print(i)
             if i['name'] == "Puzzles":
                 for j in range(len(i['points'])):
                     if i['points'][j][2] > 31 or i['points'][j][1] > 12:
@@ -71,6 +102,7 @@ def puzzle_games(username):
     else:
         print("Error: ", response.status_code)
 
+# return information on classic games
 def classic_games(username):
     url = f"https://lichess.org/api/user/{username}/rating-history"
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
@@ -97,6 +129,7 @@ def classic_games(username):
     else:
         print("Error: ", response.status_code)
 
+# return player's history of correspondence games
 def correspondence_games(username):
     url = f"https://lichess.org/api/user/{username}/rating-history"
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
@@ -109,13 +142,8 @@ def correspondence_games(username):
         data = response.json()
         for i in data:
             if i['name'] == "Correspondence":
-                # print(f"{i['name']}: \n")
                 for j in range(len(i['points'])):
-                    # print(i['points'][j][0], i['points'][j][1], i['points'][j][2])
-                    # if i['points'][j][2] > 31 or i['points'][j][1] > 12:
-                    #     continue
                     dates.append([i['points'][j][0], i['points'][j][1], i['points'][j][2], i['points'][j][3]])
-        # print(dates)
         for i in dates:
             date_dict[f"{i[0]}-{i[1]}-{i[2]}"] = i[3]
         return date_dict    
@@ -123,7 +151,7 @@ def correspondence_games(username):
         print("Error: ", response.status_code)
 
 
-# current game data
+# return game data
 def current_game(username):
     url = f"https://lichess.org/api/user/{username}/current-game"
     headers = {'Accept': 'application/json', 'Cache-Control': 'no-cache'}
@@ -155,13 +183,3 @@ def all_games():
     else:
         print("Error: ", response.status_code)
         print(response.text)
-
-if __name__ == "__main__":
-    username = input("Enter a username: ")
-    user_info("tripmaster")
-    print("\nCurrent game info:\n")
-    current_game(username)
-    # all_games()
-    user_info("tripmaster")
-    top_ten()
-    correspondence_games("tripmaster")
